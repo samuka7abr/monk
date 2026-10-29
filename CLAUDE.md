@@ -52,6 +52,10 @@ cargo run -q -- exemplos/fatorial.mk --stats    # M23
 cargo run -q -- exemplos/fatorial.mk -O         # M24
 ```
 
+O `Makefile` tem atalhos para os mesmos comandos (`make` lista todos):
+`make bootstrap` (instala Rust, rustfmt, clippy e o linker), `make run ARQ=... ARGS=...`,
+`make tokens`, `make test`, `make lint`, `make check` (o mesmo que o CI roda).
+
 O CI (`.github/workflows/ci.yml`, criado em M01) roda fmt, clippy e testes em todo PR.
 
 ---
@@ -61,11 +65,15 @@ O CI (`.github/workflows/ci.yml`, criado em M01) roda fmt, clippy e testes em to
 ```
 monk/
 ├── Cargo.toml              # crate "monk": lib + bin; dependência: clap (derive)
+├── Makefile                # atalhos: bootstrap, run, tokens, test, lint, check
+├── scripts/bootstrap.sh    # instala o que falta na máquina (chamado por make bootstrap)
 ├── src/
 │   ├── main.rs             # CLI (M01, M05, M06, M14, M17, M19, M21, M23, M24)
 │   ├── lib.rs              # declara os módulos públicos
 │   ├── token.rs            # M03
+│   ├── token/testes.rs     # testes unitários de token.rs
 │   ├── lexer.rs            # M04, M06
+│   ├── lexer/testes.rs     # testes unitários de lexer.rs
 │   ├── ast.rs              # M10, M14 (pretty-printer)
 │   ├── parser.rs           # M11, M12
 │   ├── simbolos.rs         # M16
@@ -92,8 +100,11 @@ monk/
     └── otimizacao.md       # M26
 ```
 
-Testes unitários ficam no próprio módulo (`#[cfg(test)] mod testes`). Testes de
-integração ficam em `tests/`.
+Testes unitários ficam fora do arquivo do módulo, em `src/<modulo>/testes.rs`, e o
+módulo só declara `#[cfg(test)] mod testes;` no fim (ex.: `src/parser.rs` →
+`src/parser/testes.rs`). Continuam sendo filhos do módulo, então enxergam itens
+privados via `use super::*;` e são filtrados por `cargo test --lib <modulo>`.
+Testes de integração ficam em `tests/`.
 
 ---
 
@@ -279,7 +290,7 @@ Cada linha diz como saber se a issue está **pronta no código**. Rode na raiz d
 | M26 | `cargo test --test otimizacao` passa; `docs/otimizacao.md` tem a tabela comparativa; `git tag -l v0.5-otimizacao` não é vazio |
 
 Os nomes de teste citados acima fazem parte do contrato: quem implementa a issue cria
-testes com esses nomes (ex.: `fn precedencia()` dentro de `mod testes` de `parser.rs`).
+testes com esses nomes (ex.: `fn precedencia()` em `src/parser/testes.rs`).
 
 ---
 

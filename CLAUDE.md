@@ -3,7 +3,7 @@
 Projeto da disciplina **Compiladores 2026.2**: um compilador da linguagem **MiniLang**
 construído em fases (léxico → sintático → semântico → TAC → VM → otimizador).
 O enunciado original usa Python; **este repositório implementa tudo em Rust**.
-Programas MiniLang usam a extensão `.mini`.
+Programas MiniLang usam a extensão `.mk`.
 
 Equipe: `samuka7abr`, `andreiabtiveron`, `ArturMSS`.
 O backlog está nas issues do GitHub. Cada issue tem um ID estável no título
@@ -44,12 +44,12 @@ cargo test --lib lexer           # só os testes unitários do módulo lexer
 cargo test --test casos          # um arquivo de tests/ específico
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
-cargo run -q -- exemplos/fatorial.mini            # pipeline completo (a partir de M23)
-cargo run -q -- exemplos/fatorial.mini --tokens   # M05
-cargo run -q -- exemplos/fatorial.mini --ast      # M14
-cargo run -q -- exemplos/fatorial.mini --tac      # M21
-cargo run -q -- exemplos/fatorial.mini --stats    # M23
-cargo run -q -- exemplos/fatorial.mini -O         # M24
+cargo run -q -- exemplos/fatorial.mk            # pipeline completo (a partir de M23)
+cargo run -q -- exemplos/fatorial.mk --tokens   # M05
+cargo run -q -- exemplos/fatorial.mk --ast      # M14
+cargo run -q -- exemplos/fatorial.mk --tac      # M21
+cargo run -q -- exemplos/fatorial.mk --stats    # M23
+cargo run -q -- exemplos/fatorial.mk -O         # M24
 ```
 
 O CI (`.github/workflows/ci.yml`, criado em M01) roda fmt, clippy e testes em todo PR.
@@ -84,7 +84,7 @@ monk/
 │       ├── validos/        # M09
 │       ├── invalidos/      # M09 — 1ª linha: "// ERRO: <mensagem esperada>"
 │       └── semanticos/     # M19 — 1ª linha: "// ERRO: <mensagem esperada>"
-├── exemplos/               # programas .mini; *.out = saída esperada (M23)
+├── exemplos/               # programas .mk; *.out = saída esperada (M23)
 └── docs/
     ├── especificacao.md    # M02
     ├── gramatica.md        # M02 (rascunho), M08 (final)
@@ -252,11 +252,11 @@ Cada linha diz como saber se a issue está **pronta no código**. Rode na raiz d
 | ID | Pronta quando… |
 |---|---|
 | M01 | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` passa; existem `src/{lib,main,token,lexer,ast,parser,simbolos,semantica,ir,vm,otimizador}.rs` e `.github/workflows/ci.yml`; `cargo run -q -- README.md` ecoa o arquivo |
-| M02 | `docs/especificacao.md` e `docs/gramatica.md` existem e não estão vazios; `ls exemplos/*.mini` lista ≥ 5 arquivos (incluindo `fatorial.mini`) |
+| M02 | `docs/especificacao.md` e `docs/gramatica.md` existem e não estão vazios; `ls exemplos/*.mk` lista ≥ 5 arquivos (incluindo `fatorial.mk`) |
 | M03 | `cargo test --lib token` passa; `src/token.rs` define `TipoToken`, `Token` e `palavra_reservada` como na seção 4 |
 | M04 | `cargo test --lib lexer` passa com ≥ 8 testes (`cargo test --lib lexer -- --list 2>/dev/null \| grep -c ': test'`) |
-| M05 | `cargo run -q -- exemplos/fatorial.mini --tokens` imprime linhas no formato `L:C TIPO 'lexema'`, terminando em `EOF` |
-| M06 | `cargo run -q -- exemplos/erro_lexico.mini` imprime erros léxicos em stderr e sai com código 1; `git tag -l v0.1-lexer` não é vazio |
+| M05 | `cargo run -q -- exemplos/fatorial.mk --tokens` imprime linhas no formato `L:C TIPO 'lexema'`, terminando em `EOF` |
+| M06 | `cargo run -q -- exemplos/erro_lexico.mk` imprime erros léxicos em stderr e sai com código 1; `git tag -l v0.1-lexer` não é vazio |
 | M07 | `docs/analise-lexer.md` responde às 6 perguntas da ficha |
 | M08 | `docs/gramatica.md` contém a gramática EBNF final, a tabela FIRST de `comando` e `fator` e uma derivação mais à esquerda |
 | M09 | ≥ 8 arquivos em `tests/casos/validos/` e ≥ 8 em `tests/casos/invalidos/`, todo inválido com 1ª linha `// ERRO: ...` |
@@ -264,16 +264,16 @@ Cada linha diz como saber se a issue está **pronta no código**. Rode na raiz d
 | M11 | `cargo test --lib parser` passa, incluindo os testes `precedencia` e `associatividade_esquerda` |
 | M12 | `cargo test --lib parser` passa, incluindo `falta_ponto_virgula`; `Parser::programa` aceita todos os comandos |
 | M13 | `cargo test --test casos` passa |
-| M14 | `cargo run -q -- exemplos/fatorial.mini --ast` imprime a AST indentada começando por `Programa` |
-| M15 | `git tag -l v0.2-checkpoint` não é vazio; README tem seções de instalar, executar e testar; existem `exemplos/erro_lexico.mini` e `exemplos/erro_sintatico.mini` |
+| M14 | `cargo run -q -- exemplos/fatorial.mk --ast` imprime a AST indentada começando por `Programa` |
+| M15 | `git tag -l v0.2-checkpoint` não é vazio; README tem seções de instalar, executar e testar; existem `exemplos/erro_lexico.mk` e `exemplos/erro_sintatico.mk` |
 | M16 | `cargo test --lib simbolos` passa |
 | M17 | `cargo test --lib semantica` passa, incluindo `fora_do_escopo` e `redeclaracao`; o CLI roda o analisador após o parser |
 | M18 | `cargo test --lib semantica` passa, incluindo os testes `tipos_*` e `sem_cascata` |
-| M19 | `cargo test --test semanticos` passa; `cargo run -q -- exemplos/semantico.mini` sai com código 1; `git tag -l v0.3-semantica` não é vazio |
+| M19 | `cargo test --test semanticos` passa; `cargo run -q -- exemplos/semantico.mk` sai com código 1; `git tag -l v0.3-semantica` não é vazio |
 | M20 | `cargo test --lib ir` passa, incluindo `expressao`, `while_rotulos`, `if_sem_else` |
-| M21 | `cargo test --test tac` passa; `cargo run -q -- exemplos/fatorial.mini --tac` imprime o TAC |
+| M21 | `cargo test --test tac` passa; `cargo run -q -- exemplos/fatorial.mk --tac` imprime o TAC |
 | M22 | `cargo test --lib vm` passa, incluindo `fatorial` e `divisao_por_zero` |
-| M23 | `cargo test --test ponta_a_ponta` passa; `cargo run -q -- exemplos/fatorial.mini` imprime `120`; `git tag -l v0.4-vm` não é vazio |
+| M23 | `cargo test --test ponta_a_ponta` passa; `cargo run -q -- exemplos/fatorial.mk` imprime `120`; `git tag -l v0.4-vm` não é vazio |
 | M24 | `cargo test --lib otimizador` passa, incluindo `dobramento`, `propagacao` e `ponto_fixo`; `-O` existe no CLI |
 | M25 | `cargo test --lib otimizador` passa, incluindo `salto_constante`, `codigo_morto` e `limpeza_rotulos` |
 | M26 | `cargo test --test otimizacao` passa; `docs/otimizacao.md` tem a tabela comparativa; `git tag -l v0.5-otimizacao` não é vazio |

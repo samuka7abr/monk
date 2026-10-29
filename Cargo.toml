@@ -1,0 +1,8 @@
+[package]
+name = "monk"
+version = "0.1.0"
+edition = "2021"
+description = "Compilador da linguagem MiniLang"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }

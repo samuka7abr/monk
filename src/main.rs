@@ -7,7 +7,7 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(name = "monk", about = "Compilador da linguagem MiniLang", version)]
 struct Cli {
-    /// Arquivo-fonte MiniLang (.mini)
+    /// Arquivo-fonte MiniLang (.mk)
     arquivo: PathBuf,
 }
 

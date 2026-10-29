@@ -4,7 +4,7 @@ Compilador da linguagem MiniLang escrito em Rust, desenvolvido para a disciplina
 Compiladores 2026.2. O compilador é construído em fases: léxico, sintático,
 semântico, geração de código de três endereços (TAC), máquina virtual e otimizador.
 
-Programas MiniLang usam a extensão `.mini`.
+Programas MiniLang usam a extensão `.mk`.
 
 ## Pré-requisitos
 
@@ -19,7 +19,7 @@ cargo build
 ## Executar
 
 ```bash
-cargo run -- exemplos/fatorial.mini
+cargo run -- exemplos/fatorial.mk
 ```
 
 Por enquanto o CLI apenas lê o arquivo e ecoa o seu conteúdo. As fases do

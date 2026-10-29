@@ -4,7 +4,7 @@
 > atualizar o lexer, a gramática (`docs/gramatica.md`) e os testes, e avisar a equipe.
 
 MiniLang é uma linguagem imperativa didática, com sintaxe próxima de C, Go e Rust.
-Programas usam a extensão `.mini`.
+Programas usam a extensão `.mk`.
 
 ## 1. Estrutura do programa
 

@@ -156,3 +156,55 @@ fn fatorial() {
     assert_eq!(toks[0].tipo, TipoToken::Var);
     assert_eq!((toks[0].linha, toks[0].coluna), (2, 1));
 }
+
+#[test]
+fn erro_um_caractere() {
+    let mut lexer = Lexer::new("x @ y");
+    let tipos_lidos: Vec<TipoToken> = lexer.tokens().into_iter().map(|t| t.tipo).collect();
+    assert_eq!(
+        tipos_lidos,
+        vec![TipoToken::Id, TipoToken::Id, TipoToken::Eof]
+    );
+    assert_eq!(lexer.erros(), ["1:3: erro léxico: caractere inválido '@'"]);
+}
+
+#[test]
+fn erros_em_linhas_diferentes() {
+    let mut lexer = Lexer::new("a @ b\n\n  c $ d");
+    let toks = lexer.tokens();
+    assert_eq!(toks.len(), 5);
+    assert_eq!(
+        lexer.erros(),
+        [
+            "1:3: erro léxico: caractere inválido '@'",
+            "3:5: erro léxico: caractere inválido '$'",
+        ]
+    );
+}
+
+#[test]
+fn erro_no_fim_do_arquivo() {
+    let mut lexer = Lexer::new("x #");
+    let toks = lexer.tokens();
+    let eof = toks.last().expect("sempre há Eof");
+    assert_eq!(eof.tipo, TipoToken::Eof);
+    assert_eq!((eof.linha, eof.coluna), (1, 4));
+    assert_eq!(lexer.erros(), ["1:3: erro léxico: caractere inválido '#'"]);
+}
+
+#[test]
+fn erros_consecutivos() {
+    let mut lexer = Lexer::new("x@#y");
+    let tipos_lidos: Vec<TipoToken> = lexer.tokens().into_iter().map(|t| t.tipo).collect();
+    assert_eq!(
+        tipos_lidos,
+        vec![TipoToken::Id, TipoToken::Id, TipoToken::Eof]
+    );
+    assert_eq!(
+        lexer.erros(),
+        [
+            "1:2: erro léxico: caractere inválido '@'",
+            "1:3: erro léxico: caractere inválido '#'",
+        ]
+    );
+}

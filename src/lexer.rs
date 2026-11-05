@@ -41,7 +41,9 @@ impl Lexer {
             } else if let Some((tipo, lexema)) = self.ler_operador(c) {
                 saida.push(Token::new(tipo, lexema, linha, coluna));
             } else {
-                // M06: registrar erro léxico aqui.
+                self.erros.push(format!(
+                    "{linha}:{coluna}: erro léxico: caractere inválido '{c}'"
+                ));
                 self.avancar();
             }
         }
@@ -49,7 +51,7 @@ impl Lexer {
         saida
     }
 
-    /// Erros léxicos encontrados (sempre vazio até a M06).
+    /// Erros léxicos encontrados (vazio se não houve erro léxico).
     pub fn erros(&self) -> &[String] {
         &self.erros
     }

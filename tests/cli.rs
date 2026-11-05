@@ -79,3 +79,25 @@ fn ajuda_descreve_tokens() {
         .unwrap()
         .contains("--tokens"));
 }
+
+#[test]
+fn erro_lexico_sai_com_codigo_1() {
+    let caminho = exemplo("erro_lexico.mk");
+    for args in [
+        vec![caminho.to_str().unwrap()],
+        vec![caminho.to_str().unwrap(), "--tokens"],
+    ] {
+        let saida = monk(&args);
+        assert_eq!(saida.status.code(), Some(1));
+        assert!(saida.stdout.is_empty(), "nada deve ir para stdout");
+
+        let erros = String::from_utf8(saida.stderr).unwrap();
+        assert_eq!(
+            erros.lines().collect::<Vec<_>>(),
+            [
+                "3:16: erro léxico: caractere inválido '@'",
+                "4:10: erro léxico: caractere inválido '#'",
+            ]
+        );
+    }
+}

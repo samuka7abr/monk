@@ -1,0 +1,2 @@
+// ERRO: esperado ';'
+print(x)

@@ -78,11 +78,13 @@ O mesmo truque separa `/` de comentário `//` ([linhas 87–94][s-slash]).
 **No nosso lexer:** [`ler_operador`][m-operador] (linhas 106–137) faz o
 contrário: primeiro **olha** o par `(c, proximo())` sem consumir nada e só depois
 avança 1 ou 2 posições. O efeito é o mesmo (casamento guloso, `<=` antes de `<`).
-Para a MiniLang essa ordem é mais natural, porque `!` sozinho não é token (seção
-2.8 da especificação). No jlox existe `BANG`, então consumir o `!` antes de
-decidir nunca dá errado. No nosso caso, se `!` não for seguido de `=`,
-`ler_operador` devolve `None` sem ter consumido nada, e quem chama registra o
-erro léxico.
+
+Uma diferença de linguagem: no Lox `!` sozinho é o token `BANG`, e na MiniLang é
+erro léxico (seção 2.8 da especificação). No nosso lexer, se `!` não for seguido
+de `=`, `ler_operador` devolve `None` sem consumir nada, e quem chama registra o
+erro e avança um caractere. Com `match()`, o `!` seria consumido primeiro e o
+erro registrado em seguida. No modo pânico da M06 as duas formas dão o mesmo
+resultado: um erro na posição do `!` e a análise continua no caractere seguinte.
 
 ## 4. Ao achar um caractere inválido: para ou continua?
 
@@ -186,10 +188,12 @@ loop {
 Os testes atuais de `src/lexer/testes.rs` (lexemas de `a<=b`, `x==y`, reservadas)
 cobririam essa mudança sem alteração, porque a interface pública não muda.
 
-**Ideia considerada e não escolhida: o `match(expected)`.** É elegante no jlox,
-mas pressupõe consumir o primeiro caractere antes de decidir. Na MiniLang o `!`
-sozinho é erro, então seria preciso tratar o `!` como caso especial antes de
-consumir. A nossa leitura antecipada com `proximo()` já resolve isso sem exceção.
+**Ideia considerada e não escolhida: o `match(expected)`.** Funcionaria tão bem
+quanto a leitura antecipada (pergunta 3), mas o ganho seria pequeno. O
+`proximo()` já cobre os 4 operadores de 2 caracteres, e adotar o `match()`
+exigiria mover o registro do erro do `!` para dentro de `ler_operador`, porque
+hoje quem registra o erro e avança é o laço principal. O recorte do lexema
+resolve um problema que existe de fato (o `format!("{c}=")`).
 
 [scanner]: https://github.com/munificent/craftinginterpreters/blob/4a840f70f69c6ddd17cfef4f6964f8e1bcd8c3d4/java/com/craftinginterpreters/lox/Scanner.java
 [lox]: https://github.com/munificent/craftinginterpreters/blob/4a840f70f69c6ddd17cfef4f6964f8e1bcd8c3d4/java/com/craftinginterpreters/lox/Lox.java

@@ -4,6 +4,7 @@ use std::process;
 
 use clap::Parser;
 use monk::lexer::Lexer;
+use monk::token::Token;
 
 /// Compilador da linguagem MiniLang.
 #[derive(Parser, Debug)]
@@ -18,10 +19,9 @@ struct Cli {
 }
 
 /// Imprime um token por linha no formato `{linha}:{coluna} {tipo} '{lexema}'`.
-fn imprimir_tokens(fonte: &str) -> io::Result<()> {
-    let tokens = Lexer::new(fonte).tokens();
+fn imprimir_tokens(tokens: &[Token]) -> io::Result<()> {
     let mut saida = io::stdout().lock();
-    for t in &tokens {
+    for t in tokens {
         writeln!(saida, "{}:{} {} '{}'", t.linha, t.coluna, t.tipo, t.lexema)?;
     }
     saida.flush()
@@ -42,8 +42,17 @@ fn main() {
         }
     };
 
+    let mut lexer = Lexer::new(&fonte);
+    let tokens = lexer.tokens();
+    if !lexer.erros().is_empty() {
+        for erro in lexer.erros() {
+            eprintln!("{erro}");
+        }
+        process::exit(1);
+    }
+
     let resultado = if cli.tokens {
-        imprimir_tokens(&fonte)
+        imprimir_tokens(&tokens)
     } else {
         write!(io::stdout().lock(), "{fonte}")
     };

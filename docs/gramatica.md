@@ -112,11 +112,11 @@ dá a estrutura é a gramática recursiva à esquerda equivalente
 ```
 soma
 ├── soma
-│   ├── soma ── termo ── NUM 1
+│   ├── soma ── termo ── unario ── fator ── NUM 1
 │   ├── "-"
-│   └── termo ── NUM 2
+│   └── termo ── unario ── fator ── NUM 2
 ├── "-"
-└── termo ── NUM 3
+└── termo ── unario ── fator ── NUM 3
 ```
 
 Ou seja, `(1 - 2) - 3`. A árvore é única porque o operando direito de cada `-` é
@@ -279,7 +279,10 @@ fixo e monta a tabela LL(1). O resultado foi **zero conflitos**.
   um operador de comparação, logo `a < b < c` não tem derivação. Depois de
   `1 < 2`, `expr` termina e o próximo token tem de estar no FOLLOW de `expr`
   (`")"` ou `";"`). Em `var b: bool = 1 < 2 < 3;`, o parser espera `;` e encontra
-  `<`. Para encadear, use parênteses: `(a < b) == (c < d)`.
+  `<`. A linguagem não tem como expressar o sentido matemático de `a < b < c`
+  (`a < b` e `b < c`), porque não há operadores lógicos. Como `==` e `!=` aceitam
+  dois `bool` (seção 4.2 da especificação), dá para comparar os resultados de
+  comparações usando parênteses: `(a < b) == (c < d)`.
 - **Parênteses e chaves obrigatórios em `if`/`while`.** Eles delimitam a condição
   e o corpo sem precisar de outra regra.
 

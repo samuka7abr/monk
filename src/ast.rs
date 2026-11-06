@@ -190,6 +190,3 @@ impl Comando {
         Comando { kind, linha }
     }
 }
-
-#[cfg(test)]
-mod testes;

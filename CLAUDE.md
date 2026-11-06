@@ -271,7 +271,7 @@ Cada linha diz como saber se a issue está **pronta no código**. Rode na raiz d
 | M07 | `docs/analise-lexer.md` responde às 6 perguntas da ficha |
 | M08 | `docs/gramatica.md` contém a gramática EBNF final, a tabela FIRST de `comando` e `fator` e uma derivação mais à esquerda |
 | M09 | ≥ 8 arquivos em `tests/casos/validos/` e ≥ 8 em `tests/casos/invalidos/`, todo inválido com 1ª linha `// ERRO: ...` |
-| M10 | `cargo test --lib ast` passa; `src/ast.rs` segue o contrato da seção 4 |
+| M10 | `cargo test --test ast` passa; `src/ast.rs` segue o contrato da seção 4 |
 | M11 | `cargo test --lib parser` passa, incluindo os testes `precedencia` e `associatividade_esquerda` |
 | M12 | `cargo test --lib parser` passa, incluindo `falta_ponto_virgula`; `Parser::programa` aceita todos os comandos |
 | M13 | `cargo test --test casos` passa |

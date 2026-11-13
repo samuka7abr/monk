@@ -233,3 +233,259 @@ fn sempre_termina() {
         let _ = parser(fonte).expressao();
     }
 }
+
+// ------------------------------------------------------------------ comandos e programa
+
+fn programa(fonte: &str) -> Programa {
+    parser(fonte)
+        .programa()
+        .unwrap_or_else(|e| panic!("{fonte:?}: {e}"))
+}
+
+fn erro_programa(fonte: &str) -> String {
+    match parser(fonte).programa() {
+        Ok(p) => panic!("{fonte:?} deveria falhar, mas deu {p:?}"),
+        Err(e) => e.to_string(),
+    }
+}
+
+fn bloco(comandos: Vec<Comando>, linha: usize) -> Bloco {
+    Bloco { comandos, linha }
+}
+
+fn print_num(n: i64, linha: usize) -> Comando {
+    Comando::new(
+        ComandoKind::Print {
+            expr: Expr::num(n, linha),
+        },
+        linha,
+    )
+}
+
+#[test]
+fn programa_vazio() {
+    assert_eq!(programa("").comandos, vec![]);
+    assert_eq!(programa("  // só comentário\n").comandos, vec![]);
+}
+
+#[test]
+fn declaracao() {
+    assert_eq!(
+        programa("var x: int = 1 + 2;").comandos,
+        vec![Comando::new(
+            ComandoKind::Decl {
+                nome: "x".into(),
+                tipo: Tipo::Int,
+                expr: Expr::binario(OpBin::Mais, Expr::num(1, 1), Expr::num(2, 1), 1),
+            },
+            1,
+        )]
+    );
+    let ComandoKind::Decl { tipo, .. } = &programa("var b: bool = true;").comandos[0].kind else {
+        panic!("deveria ser Decl");
+    };
+    assert_eq!(*tipo, Tipo::Bool);
+}
+
+#[test]
+fn atribuicao_e_print() {
+    assert_eq!(
+        programa("x = 3;\nprint(x);").comandos,
+        vec![
+            Comando::new(
+                ComandoKind::Atrib {
+                    nome: "x".into(),
+                    expr: Expr::num(3, 1),
+                },
+                1,
+            ),
+            Comando::new(
+                ComandoKind::Print {
+                    expr: Expr::var("x", 2),
+                },
+                2,
+            ),
+        ]
+    );
+}
+
+#[test]
+fn if_sem_else() {
+    assert_eq!(
+        programa("if (true) {\n  print(1);\n}").comandos,
+        vec![Comando::new(
+            ComandoKind::If {
+                cond: Expr::bool(true, 1),
+                entao: bloco(vec![print_num(1, 2)], 1),
+                senao: None,
+            },
+            1,
+        )]
+    );
+}
+
+#[test]
+fn if_com_else() {
+    assert_eq!(
+        programa("if (false) { print(1); }\nelse { print(2); }").comandos,
+        vec![Comando::new(
+            ComandoKind::If {
+                cond: Expr::bool(false, 1),
+                entao: bloco(vec![print_num(1, 1)], 1),
+                senao: Some(bloco(vec![print_num(2, 2)], 2)),
+            },
+            1,
+        )]
+    );
+}
+
+#[test]
+fn else_if_vira_bloco_com_um_if() {
+    let fonte = "if (a) { }\nelse if (b) { }\nelse { print(3); }";
+    let interno = Comando::new(
+        ComandoKind::If {
+            cond: Expr::var("b", 2),
+            entao: bloco(vec![], 2),
+            senao: Some(bloco(vec![print_num(3, 3)], 3)),
+        },
+        2,
+    );
+    assert_eq!(
+        programa(fonte).comandos,
+        vec![Comando::new(
+            ComandoKind::If {
+                cond: Expr::var("a", 1),
+                entao: bloco(vec![], 1),
+                senao: Some(bloco(vec![interno], 2)),
+            },
+            1,
+        )]
+    );
+}
+
+#[test]
+fn while_() {
+    assert_eq!(
+        programa("while (i < 3) {\n  i = i + 1;\n}").comandos,
+        vec![Comando::new(
+            ComandoKind::While {
+                cond: Expr::binario(OpBin::Menor, Expr::var("i", 1), Expr::num(3, 1), 1),
+                corpo: bloco(
+                    vec![Comando::new(
+                        ComandoKind::Atrib {
+                            nome: "i".into(),
+                            expr: Expr::binario(OpBin::Mais, Expr::var("i", 2), Expr::num(1, 2), 2,),
+                        },
+                        2,
+                    )],
+                    1,
+                ),
+            },
+            1,
+        )]
+    );
+}
+
+#[test]
+fn bloco_aninhado() {
+    assert_eq!(
+        programa("{\n  {\n    print(1);\n  }\n  {}\n}").comandos,
+        vec![Comando::new(
+            ComandoKind::Bloco(bloco(
+                vec![
+                    Comando::new(ComandoKind::Bloco(bloco(vec![print_num(1, 3)], 2)), 2),
+                    Comando::new(ComandoKind::Bloco(bloco(vec![], 5)), 5),
+                ],
+                1,
+            )),
+            1,
+        )]
+    );
+}
+
+#[test]
+fn falta_ponto_virgula() {
+    let msg = erro_programa("var x: int = 1");
+    assert!(msg.contains("esperado ';'"), "{msg}");
+    assert!(msg.contains("encontrado 'EOF'"), "{msg}");
+    assert_eq!(msg, "1:15: erro sintático: esperado ';', encontrado 'EOF'");
+}
+
+#[test]
+fn erros_de_comando() {
+    for (fonte, esperado) in [
+        (
+            "1 = x;",
+            "1:1: erro sintático: comando inesperado, encontrado '1'",
+        ),
+        (
+            "x = 1; }",
+            "1:8: erro sintático: comando inesperado, encontrado '}'",
+        ),
+        (
+            "var x int = 1;",
+            "1:7: erro sintático: esperado ':', encontrado 'int'",
+        ),
+        (
+            "var 1x: int = 0;",
+            "1:5: erro sintático: esperado identificador, encontrado '1'",
+        ),
+        (
+            "var x: 1 = 0;",
+            "1:8: erro sintático: esperado tipo, encontrado '1'",
+        ),
+        (
+            "var x: int 0;",
+            "1:12: erro sintático: esperado '=', encontrado '0'",
+        ),
+        ("x 1;", "1:3: erro sintático: esperado '=', encontrado '1'"),
+        (
+            "print x;",
+            "1:7: erro sintático: esperado '(', encontrado 'x'",
+        ),
+        (
+            "print(x;",
+            "1:8: erro sintático: esperado ')', encontrado ';'",
+        ),
+        (
+            "if x > 1 { }",
+            "1:4: erro sintático: esperado '(', encontrado 'x'",
+        ),
+        (
+            "if (x) print(x);",
+            "1:8: erro sintático: esperado '{', encontrado 'print'",
+        ),
+        (
+            "if (x) { } else print(x);",
+            "1:17: erro sintático: esperado '{', encontrado 'print'",
+        ),
+        (
+            "while (x) { x = x - 1;",
+            "1:23: erro sintático: esperado '}', encontrado 'EOF'",
+        ),
+        (
+            "var b: bool = 1 < 2 < 3;",
+            "1:21: erro sintático: esperado ';', encontrado '<'",
+        ),
+    ] {
+        assert_eq!(erro_programa(fonte), esperado, "{fonte}");
+    }
+}
+
+#[test]
+fn programa_sempre_termina() {
+    for fonte in [
+        "}",
+        "{",
+        "else",
+        "if",
+        "if (",
+        "while (x) {",
+        "var",
+        ";;",
+        "{ } }",
+        "print",
+    ] {
+        let _ = parser(fonte).programa();
+    }
+}

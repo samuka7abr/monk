@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use crate::ast::{Expr, OpBin, OpUn};
+use crate::ast::{Bloco, Comando, ComandoKind, Expr, OpBin, OpUn, Programa, Tipo};
 use crate::token::{TipoToken, Token};
 
 /// Erro sintático já formatado como `{linha}:{coluna}: erro sintático: {msg}, encontrado '{lexema}'`.
@@ -87,9 +87,144 @@ impl Parser {
         }
     }
 
+    // ---------------------------------------------------------------- programa e comandos
+
+    /// `programa = { comando } EOF` — tenta um comando para todo token que não é `Eof`,
+    /// então sobras como `}` viram `comando inesperado`.
+    pub fn programa(&mut self) -> Result<Programa, ErroSintatico> {
+        let mut comandos = Vec::new();
+        while !self.verificar(&[TipoToken::Eof]) {
+            comandos.push(self.comando()?);
+        }
+        Ok(Programa { comandos })
+    }
+
+    /// `comando = decl | atrib | print | if | while | bloco`, escolhido pelo FIRST.
+    fn comando(&mut self) -> Result<Comando, ErroSintatico> {
+        match self.atual().tipo {
+            TipoToken::Var => self.decl(),
+            TipoToken::Id => self.atrib(),
+            TipoToken::Print => self.print(),
+            TipoToken::If => self.if_(),
+            TipoToken::While => self.while_(),
+            TipoToken::AbreChave => {
+                let bloco = self.bloco()?;
+                let linha = bloco.linha;
+                Ok(Comando::new(ComandoKind::Bloco(bloco), linha))
+            }
+            _ => Err(self.erro("comando inesperado")),
+        }
+    }
+
+    /// `decl = "var" ID ":" tipo "=" expr ";"`
+    fn decl(&mut self) -> Result<Comando, ErroSintatico> {
+        let linha = self.esperar(TipoToken::Var, "esperado 'var'")?.linha;
+        let nome = self
+            .esperar(TipoToken::Id, "esperado identificador")?
+            .lexema;
+        self.esperar(TipoToken::DoisPontos, "esperado ':'")?;
+        let tipo = self.tipo()?;
+        self.esperar(TipoToken::Atrib, "esperado '='")?;
+        let expr = self.expr()?;
+        self.esperar(TipoToken::PontoVirg, "esperado ';'")?;
+        Ok(Comando::new(ComandoKind::Decl { nome, tipo, expr }, linha))
+    }
+
+    /// `tipo = "int" | "bool"`
+    fn tipo(&mut self) -> Result<Tipo, ErroSintatico> {
+        match self.atual().tipo {
+            TipoToken::Int => {
+                self.consumir();
+                Ok(Tipo::Int)
+            }
+            TipoToken::Bool => {
+                self.consumir();
+                Ok(Tipo::Bool)
+            }
+            _ => Err(self.erro("esperado tipo")),
+        }
+    }
+
+    /// `atrib = ID "=" expr ";"`
+    fn atrib(&mut self) -> Result<Comando, ErroSintatico> {
+        let token = self.esperar(TipoToken::Id, "esperado identificador")?;
+        self.esperar(TipoToken::Atrib, "esperado '='")?;
+        let expr = self.expr()?;
+        self.esperar(TipoToken::PontoVirg, "esperado ';'")?;
+        Ok(Comando::new(
+            ComandoKind::Atrib {
+                nome: token.lexema,
+                expr,
+            },
+            token.linha,
+        ))
+    }
+
+    /// `print = "print" "(" expr ")" ";"`
+    fn print(&mut self) -> Result<Comando, ErroSintatico> {
+        let linha = self.esperar(TipoToken::Print, "esperado 'print'")?.linha;
+        self.esperar(TipoToken::AbrePar, "esperado '('")?;
+        let expr = self.expr()?;
+        self.esperar(TipoToken::FechaPar, "esperado ')'")?;
+        self.esperar(TipoToken::PontoVirg, "esperado ';'")?;
+        Ok(Comando::new(ComandoKind::Print { expr }, linha))
+    }
+
+    /// `if = "if" "(" expr ")" bloco [ "else" ( bloco | if ) ]`
+    ///
+    /// `else if` vira um bloco cujo único comando é o `if` encadeado.
+    fn if_(&mut self) -> Result<Comando, ErroSintatico> {
+        let linha = self.esperar(TipoToken::If, "esperado 'if'")?.linha;
+        let cond = self.condicao()?;
+        let entao = self.bloco()?;
+        let senao = if self.verificar(&[TipoToken::Else]) {
+            self.consumir();
+            if self.verificar(&[TipoToken::If]) {
+                let interno = self.if_()?;
+                Some(Bloco {
+                    linha: interno.linha,
+                    comandos: vec![interno],
+                })
+            } else {
+                Some(self.bloco()?)
+            }
+        } else {
+            None
+        };
+        Ok(Comando::new(ComandoKind::If { cond, entao, senao }, linha))
+    }
+
+    /// `while = "while" "(" expr ")" bloco`
+    fn while_(&mut self) -> Result<Comando, ErroSintatico> {
+        let linha = self.esperar(TipoToken::While, "esperado 'while'")?.linha;
+        let cond = self.condicao()?;
+        let corpo = self.bloco()?;
+        Ok(Comando::new(ComandoKind::While { cond, corpo }, linha))
+    }
+
+    /// `"(" expr ")"`, comum a `if` e `while`.
+    fn condicao(&mut self) -> Result<Expr, ErroSintatico> {
+        self.esperar(TipoToken::AbrePar, "esperado '('")?;
+        let cond = self.expr()?;
+        self.esperar(TipoToken::FechaPar, "esperado ')'")?;
+        Ok(cond)
+    }
+
+    /// `bloco = "{" { comando } "}"` — o laço para em `}` ou em `Eof`, e então
+    /// falta `}` dá `esperado '}'`.
+    fn bloco(&mut self) -> Result<Bloco, ErroSintatico> {
+        let linha = self.esperar(TipoToken::AbreChave, "esperado '{'")?.linha;
+        let mut comandos = Vec::new();
+        while !self.verificar(&[TipoToken::FechaChave, TipoToken::Eof]) {
+            comandos.push(self.comando()?);
+        }
+        self.esperar(TipoToken::FechaChave, "esperado '}'")?;
+        Ok(Bloco { comandos, linha })
+    }
+
     // ---------------------------------------------------------------- expressões
 
-    /// Ponto de entrada temporário para testar expressões isoladamente (M11).
+    /// Ponto de entrada para testar expressões isoladamente (M11).
     pub fn expressao(&mut self) -> Result<Expr, ErroSintatico> {
         self.expr()
     }

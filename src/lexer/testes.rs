@@ -208,3 +208,128 @@ fn erros_consecutivos() {
         ]
     );
 }
+
+/// Token observado nos testes: `(tipo, lexema, linha, coluna)`.
+type TokenVisto = (TipoToken, String, usize, usize);
+
+/// Tokens e erros léxicos da entrada.
+fn lexar_detalhado(fonte: &str) -> (Vec<TokenVisto>, Vec<String>) {
+    let mut lexer = Lexer::new(fonte);
+    let toks = lexer
+        .tokens()
+        .into_iter()
+        .map(|t| (t.tipo, t.lexema, t.linha, t.coluna))
+        .collect();
+    (toks, lexer.erros().to_vec())
+}
+
+fn tok(tipo: TipoToken, lexema: &str, linha: usize, coluna: usize) -> TokenVisto {
+    (tipo, lexema.to_string(), linha, coluna)
+}
+
+#[test]
+fn retorno_de_carro_e_espaco() {
+    use TipoToken::*;
+    let (toks, erros) = lexar_detalhado("var\r\nx\r\n");
+    assert_eq!(
+        toks,
+        vec![
+            tok(Var, "var", 1, 1),
+            tok(Id, "x", 2, 1),
+            tok(Eof, "", 3, 1)
+        ]
+    );
+    assert!(erros.is_empty(), "{erros:?}");
+
+    // `\r` sozinho separa tokens, conta uma coluna e não inicia nova linha.
+    let (toks, erros) = lexar_detalhado("a\rb");
+    assert_eq!(
+        toks,
+        vec![tok(Id, "a", 1, 1), tok(Id, "b", 1, 3), tok(Eof, "", 1, 4)]
+    );
+    assert!(erros.is_empty(), "{erros:?}");
+}
+
+#[test]
+fn exclamacao_isolada_e_erro() {
+    use TipoToken::*;
+    let (toks, erros) = lexar_detalhado("a ! b");
+    assert_eq!(
+        toks,
+        vec![tok(Id, "a", 1, 1), tok(Id, "b", 1, 5), tok(Eof, "", 1, 6)]
+    );
+    assert_eq!(erros, ["1:3: erro léxico: caractere inválido '!'"]);
+
+    // `! =` separados não formam `!=`.
+    let (toks, erros) = lexar_detalhado("! =");
+    assert_eq!(toks, vec![tok(Atrib, "=", 1, 3), tok(Eof, "", 1, 4)]);
+    assert_eq!(erros, ["1:1: erro léxico: caractere inválido '!'"]);
+
+    // `!` no fim da entrada.
+    let (toks, erros) = lexar_detalhado("!");
+    assert_eq!(toks, vec![tok(Eof, "", 1, 2)]);
+    assert_eq!(erros, ["1:1: erro léxico: caractere inválido '!'"]);
+
+    // Controle: `!=` colado continua um único token.
+    let (toks, erros) = lexar_detalhado("a!=b");
+    assert_eq!(
+        toks,
+        vec![
+            tok(Id, "a", 1, 1),
+            tok(Diferente, "!=", 1, 2),
+            tok(Id, "b", 1, 4),
+            tok(Eof, "", 1, 5),
+        ]
+    );
+    assert!(erros.is_empty(), "{erros:?}");
+}
+
+#[test]
+fn letra_unicode_nao_inicia_identificador() {
+    use TipoToken::*;
+    let (toks, erros) = lexar_detalhado("çx");
+    assert_eq!(toks, vec![tok(Id, "x", 1, 2), tok(Eof, "", 1, 3)]);
+    assert_eq!(erros, ["1:1: erro léxico: caractere inválido 'ç'"]);
+}
+
+#[test]
+fn letra_unicode_nao_continua_identificador() {
+    use TipoToken::*;
+    let (toks, erros) = lexar_detalhado("aç1");
+    assert_eq!(
+        toks,
+        vec![tok(Id, "a", 1, 1), tok(Num, "1", 1, 3), tok(Eof, "", 1, 4)]
+    );
+    assert_eq!(erros, ["1:2: erro léxico: caractere inválido 'ç'"]);
+}
+
+#[test]
+fn digito_unicode_nao_continua_identificador() {
+    use TipoToken::*;
+    // U+0663 é o dígito três arábico-índico.
+    let (toks, erros) = lexar_detalhado("a\u{0663}b");
+    assert_eq!(
+        toks,
+        vec![tok(Id, "a", 1, 1), tok(Id, "b", 1, 3), tok(Eof, "", 1, 4)]
+    );
+    assert_eq!(erros, ["1:2: erro léxico: caractere inválido '\u{0663}'"]);
+}
+
+#[test]
+fn digito_unicode_nao_inicia_numero() {
+    use TipoToken::*;
+    let (toks, erros) = lexar_detalhado("\u{0663}7");
+    assert_eq!(toks, vec![tok(Num, "7", 1, 2), tok(Eof, "", 1, 3)]);
+    assert_eq!(erros, ["1:1: erro léxico: caractere inválido '\u{0663}'"]);
+}
+
+#[test]
+fn digito_unicode_nao_continua_numero() {
+    use TipoToken::*;
+    let (toks, erros) = lexar_detalhado("1\u{0663}2");
+    assert_eq!(
+        toks,
+        vec![tok(Num, "1", 1, 1), tok(Num, "2", 1, 3), tok(Eof, "", 1, 4)]
+    );
+    assert_eq!(erros, ["1:2: erro léxico: caractere inválido '\u{0663}'"]);
+}

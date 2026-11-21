@@ -114,9 +114,9 @@ pub enum ComandoKind {
 /// Uma cadeia como `1 + 1 + ...` gera uma árvore tão funda quanto o número de operadores,
 /// então `Clone`, `PartialEq` e o `Drop` de [`ExprKind`] são iterativos.
 ///
-/// **Limite:** `Debug` continua derivado e recursivo. Com 8 MB de pilha, formatar uma
-/// árvore de mais de cerca de 10 mil níveis aborta o processo; não use `{:?}` nem
-/// `assert_eq!` em AST de programa arbitrário do usuário.
+/// **Limite:** `Debug` continua derivado e recursivo. Com 8 MB de pilha, `{:?}` aborta o
+/// processo a partir de cerca de 10 mil níveis, e `{:#?}` já leva mais de 20 s com mil
+/// níveis. Não formate com `Debug` (nem use `assert_eq!`) a AST de um programa do usuário.
 #[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,

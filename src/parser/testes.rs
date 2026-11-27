@@ -185,7 +185,7 @@ fn linha_do_operador() {
     assert_eq!(e.linha, 2);
     let e = expr("\n\n-\nx");
     assert_eq!(e.linha, 3);
-    let ExprKind::Unario { expr: x, .. } = e.kind else {
+    let ExprKind::Unario { expr: x, .. } = &e.kind else {
         panic!("deveria ser unário");
     };
     assert_eq!(x.linha, 4);

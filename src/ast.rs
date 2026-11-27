@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// Tipo de uma variável ou expressão (seção 3 da especificação).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Tipo {
     Int,
     Bool,
@@ -21,7 +21,7 @@ impl fmt::Display for Tipo {
 }
 
 /// Operador binário: aritmético ou de comparação.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OpBin {
     Mais,
     Menos,

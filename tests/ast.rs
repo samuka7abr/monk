@@ -337,3 +337,28 @@ fn programa_completo() {
     }
     assert!(sem_tipo(cond));
 }
+
+/// A tabela de tipos sugerida na M18 usa `(OpBin, Tipo, Tipo)` como chave de `HashMap`.
+#[test]
+fn opbin_e_tipo_como_chave_de_hashmap() {
+    use std::collections::HashMap;
+
+    let tabela: HashMap<(OpBin, Tipo, Tipo), Tipo> = HashMap::from([
+        ((OpBin::Mais, Tipo::Int, Tipo::Int), Tipo::Int),
+        ((OpBin::Menor, Tipo::Int, Tipo::Int), Tipo::Bool),
+        ((OpBin::Igual, Tipo::Bool, Tipo::Bool), Tipo::Bool),
+    ]);
+
+    assert_eq!(tabela.len(), 3);
+    assert_eq!(
+        tabela.get(&(OpBin::Mais, Tipo::Int, Tipo::Int)),
+        Some(&Tipo::Int)
+    );
+    assert_eq!(
+        tabela.get(&(OpBin::Menor, Tipo::Int, Tipo::Int)),
+        Some(&Tipo::Bool)
+    );
+    // A ordem dos tipos faz parte da chave, e combinações inválidas não existem.
+    assert_eq!(tabela.get(&(OpBin::Mais, Tipo::Int, Tipo::Bool)), None);
+    assert_eq!(tabela.get(&(OpBin::Mais, Tipo::Bool, Tipo::Int)), None);
+}

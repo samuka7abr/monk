@@ -262,7 +262,7 @@ Cada linha diz como saber se a issue está **pronta no código**. Rode na raiz d
 
 | ID | Pronta quando… |
 |---|---|
-| M01 | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` passa; existem `src/{lib,main,token,lexer,ast,parser,simbolos,semantica,ir,vm,otimizador}.rs` e `.github/workflows/ci.yml`; `cargo run -q -- README.md` ecoa o arquivo |
+| M01 | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` passa; existem `src/{lib,main,token,lexer,ast,parser,simbolos,semantica,ir,vm,otimizador}.rs` e `.github/workflows/ci.yml`; `cargo run -q -- exemplos/fatorial.mk` ecoa o arquivo (até a M23, que troca o eco pela execução) |
 | M02 | `docs/especificacao.md` e `docs/gramatica.md` existem e não estão vazios; `ls exemplos/*.mk` lista ≥ 5 arquivos (incluindo `fatorial.mk`) |
 | M03 | `cargo test --lib token` passa; `src/token.rs` define `TipoToken`, `Token` e `palavra_reservada` como na seção 4 |
 | M04 | `cargo test --lib lexer` passa com ≥ 8 testes (`cargo test --lib lexer -- --list 2>/dev/null \| grep -c ': test'`) |

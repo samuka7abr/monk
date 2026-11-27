@@ -54,7 +54,8 @@ fn main() {
     let resultado = if cli.tokens {
         imprimir_tokens(&tokens)
     } else {
-        write!(io::stdout().lock(), "{fonte}")
+        let mut saida = io::stdout().lock();
+        write!(saida, "{fonte}").and_then(|()| saida.flush())
     };
 
     match resultado {

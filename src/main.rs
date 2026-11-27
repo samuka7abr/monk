@@ -1,3 +1,4 @@
+use std::fmt;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process;
@@ -18,6 +19,12 @@ struct Cli {
     tokens: bool,
 }
 
+/// Escreve uma mensagem em stderr. Se stderr falhar, não há onde relatar: ignora
+/// o erro em vez de entrar em pânico, e quem chama mantém o código de saída.
+fn relatar_erro(mensagem: fmt::Arguments) {
+    let _ = writeln!(io::stderr(), "{mensagem}");
+}
+
 /// Imprime um token por linha no formato `{linha}:{coluna} {tipo} '{lexema}'`.
 fn imprimir_tokens(tokens: &[Token]) -> io::Result<()> {
     let mut saida = io::stdout().lock();
@@ -33,11 +40,11 @@ fn main() {
     let fonte = match std::fs::read_to_string(&cli.arquivo) {
         Ok(fonte) => fonte,
         Err(e) => {
-            eprintln!(
+            relatar_erro(format_args!(
                 "erro: não foi possível ler '{}': {}",
                 cli.arquivo.display(),
                 e
-            );
+            ));
             process::exit(1);
         }
     };
@@ -46,7 +53,7 @@ fn main() {
     let tokens = lexer.tokens();
     if !lexer.erros().is_empty() {
         for erro in lexer.erros() {
-            eprintln!("{erro}");
+            relatar_erro(format_args!("{erro}"));
         }
         process::exit(1);
     }
@@ -63,7 +70,7 @@ fn main() {
         // Saída fechada (ex.: `| head`): não é erro do programa.
         Err(e) if e.kind() == io::ErrorKind::BrokenPipe => {}
         Err(e) => {
-            eprintln!("erro: falha ao escrever a saída: {e}");
+            relatar_erro(format_args!("erro: falha ao escrever a saída: {e}"));
             process::exit(1);
         }
     }
